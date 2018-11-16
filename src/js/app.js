@@ -13,13 +13,14 @@ $(document).ready(function () {
 });
 
 function extract(element) {
-    let types_map = {Program: extractProgramHandler, FunctionDeclaration: extractFunctionDeclarationHandler,
+    const typesHandlersMap = {Program: extractProgramHandler, FunctionDeclaration: extractFunctionDeclarationHandler,
         Identifier: extractIdentifierHandler, BlockStatement: extractBlockStatementHandler,
         ReturnStatement: extractReturnStatementHandler, BinaryExpression: extractBinaryExpressionHandler,
         Literal: extractLiteralHandler, IfStatement: extractIfStatementHandler,
         WhileStatement:extractWhileStatementHandler, ExpressionStatement: extractExpressionStatementHandler,
-        VariableDeclaration: extractVariableDeclarationHandler, VariableDeclarator: extractVariableDeclaratorHandler};
-    let func = types_map[element.type];
+        VariableDeclaration: extractVariableDeclarationHandler, VariableDeclarator: extractVariableDeclaratorHandler,
+        AssignmentExpression: extractAssignmentExpressionHandler, CallExpression: extractCallExpressionHandler};
+    let func = typesHandlersMap[element.type];
     return func ? func(element) : null;
 }
 
@@ -31,17 +32,23 @@ function extractProgramHandler(program) {
     return tuples;
 }
 
-function extractFunctionDeclarationHandler(fun) {
-    let tuples = [{line : fun.loc.start.line , type :'function declaration' , name :fun.id.name, condition:'', value: ''}];
-    let params = fun.params;
-    for (let i = 0 ; i<params.length; i++)
-        tuples = tuples.concat(extract(params[i]));
-    tuples = tuples.concat(extract(fun.body));// fun.body it's a map , not array
+function extractFunctionDeclarationHandler(functionDeclaration) {
+    let tuples = [{line : functionDeclaration.loc.start.line , type :'function declaration' , name :functionDeclaration.id.name, condition:'', value: ''}];
+    let params = functionDeclaration.params;
+    for (let i = 0 ; i< params.length; i++) {
+        let nextParam = extract(params[i]); //expecting array of one element (a map)
+        if (nextParam[0].type) // not null or undefined or [] or false...
+            nextParam[0].type = 'variable declaration';
+        else
+            continue;
+        tuples = tuples.concat(nextParam);
+    }
+    tuples = tuples.concat(extract(functionDeclaration.body)); // functionDeclaration.body it's a map , not array
     return tuples;
 }
 
 function extractIdentifierHandler(identifier) {
-    return [{line : identifier.loc.start.line , type :'Identifier' , name :identifier.name, condition:'', value: ''}];
+    return [{line : identifier.loc.start.line , type :'identifier' , name :identifier.name, condition:'', value: ''}];
 }
 
 function extractBlockStatementHandler(blockStatement) {
@@ -53,19 +60,21 @@ function extractBlockStatementHandler(blockStatement) {
 }
 
 function extractReturnStatementHandler(returnStatement) {
-    return [{line : returnStatement.loc.start.line , type :'return statement' , name :'', condition:'', value: ''}];
+    let value = arrayOfOneMapToString(extract(returnStatement.argument));
+    return [{line : returnStatement.loc.start.line , type :'return statement' , name :'', condition:'', value: value}];
 }
 
 function extractBinaryExpressionHandler(binaryExpression) {
-    return [];
+    return arrayOfOneMapToString(extract(binaryExpression.left)) + '' + binaryExpression.operator + '' + arrayOfOneMapToString(extract(binaryExpression.right));
 }
 
 function extractLiteralHandler(literal) {
-    return [{line : literal.loc.start.line , type :'Literal' , name :'', condition:'', value: literal.value}];
+    return [{line : literal.loc.start.line , type :'literal' , name :'', condition:'', value: literal.value}];
 }
 
 function extractIfStatementHandler(ifStatement) {
-    let cond = '';
+    console.log(`in extractIfStatementHandler add support for then and alt tuples`);
+    let cond = arrayOfOneMapToString(extract(ifStatement.test));
     return [{line : ifStatement.loc.start.line , type :'if statement' , name :'', condition:cond, value: ''}];
 }
 
@@ -75,12 +84,44 @@ function extractWhileStatementHandler(whileStatement) {
 }
 
 function extractExpressionStatementHandler(expressionStatement) {
-    return [{line : expressionStatement.loc.start.line , type :'expression statement' , name :'', condition:'', value: ''}];
+    return extract(expressionStatement.expression);
 }
 
 function extractVariableDeclarationHandler(variableDeclaration) {
-    return [{line : variableDeclaration.loc.start.line , type :'expression statement' , name :'', condition:'', value: ''}];
+    let tuples = [];
+    let declarations = variableDeclaration.declarations;
+    for (let i = 0 ; i<declarations.length; i++)
+        tuples = tuples.concat(extract(declarations[i]));
+    return tuples;
 }
 function extractVariableDeclaratorHandler(variableDeclarator) {
-    return [{line : variableDeclarator.loc.start.line , type :'expression statement' , name :'', condition:'', value: ''}];
+    let name = arrayOfOneMapToString(extract(variableDeclarator.id));
+    let value = variableDeclarator.init ?  extract(variableDeclarator.init): null;
+    return [{line : variableDeclarator.loc.start.line , type :'variable declaration', name: name, condition: '', value:value}];
+}
+
+function extractAssignmentExpressionHandler(assignmentExpression) {
+    let name =  assignmentExpression.left.name ;
+    let value = arrayOfOneMapToString(extract(assignmentExpression.right));
+    return [{line : assignmentExpression.loc.start.line , type :'assignment expression', name: name, condition: '', value: value}];
+}
+
+function extractCallExpressionHandler(callExpression) {
+    let value = '';
+    return [{line : callExpression.loc.start.line , type :'call expression', name: name, condition: '', value: value}];
+}
+
+function arrayOfOneMapToString(arrayOfOneMap) {
+    const toStringHandlersMap = {identifier: identifierToString, literal: literalToString};
+    if (arrayOfOneMap && arrayOfOneMap.length > 0 && toStringHandlersMap[arrayOfOneMap[0].type]!==undefined)
+        return toStringHandlersMap[arrayOfOneMap[0].type](arrayOfOneMap[0]);
+    return arrayOfOneMap;
+}
+
+function identifierToString(identifier) {
+    return identifier.name;
+}
+
+function literalToString(literal) {
+    return literal.value;
 }
