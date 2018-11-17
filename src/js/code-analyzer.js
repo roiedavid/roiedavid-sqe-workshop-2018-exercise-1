@@ -12,7 +12,8 @@ function extract(element) {
         WhileStatement:extractWhileStatementHandler, ExpressionStatement: extractExpressionStatementHandler,
         VariableDeclaration: extractVariableDeclarationHandler, VariableDeclarator: extractVariableDeclaratorHandler,
         AssignmentExpression: extractAssignmentExpressionHandler, CallExpression: extractCallExpressionHandler,
-        UnaryExpression: extractUnaryExpressionHandler, MemberExpression: extractMemberExpressionHandler};
+        UnaryExpression: extractUnaryExpressionHandler, MemberExpression: extractMemberExpressionHandler,
+        ForStatement: extractForStatementHandler, UpdateExpression: extractUpdateExpressionHandler};
     let func = typesHandlersMap[element.type];
     return func ? func(element) : null;
 }
@@ -69,7 +70,12 @@ function extractIfStatementHandler(ifStatement) {
     let condition = arrayOfOneMapToString(extract(ifStatement.test));
     let tuples = [{line : ifStatement.loc.start.line , type :'if statement' , name :'', condition:condition, value: ''}];
     tuples = tuples.concat(extract(ifStatement.consequent)); // ifStatement.consequent it's a map , not array
-    tuples = tuples.concat(extract(ifStatement.alternate)); // ifStatement.alternate it's a map , not array
+    if (ifStatement.alternate) { // there is else
+        let alternate = extract(ifStatement.alternate);
+        if (alternate[0].type === 'if statement') // 'else if ...'
+            alternate[0].type = 'else if statement';
+        tuples = tuples.concat(alternate); // alternate it's a map , not array
+    }
     return tuples;
 }
 
@@ -94,7 +100,7 @@ function extractVariableDeclarationHandler(variableDeclaration) {
 
 function extractVariableDeclaratorHandler(variableDeclarator) {
     let name = arrayOfOneMapToString(extract(variableDeclarator.id));
-    let value = variableDeclarator.init ?  extract(variableDeclarator.init): null;
+    let value = variableDeclarator.init ?  arrayOfOneMapToString(extract(variableDeclarator.init)): null;
     return [{line : variableDeclarator.loc.start.line , type :'variable declaration', name: name, condition: '', value:value}];
 }
 
@@ -119,9 +125,28 @@ function extractMemberExpressionHandler(memberExpression) {
     return [{line : memberExpression.loc.start.line , type :'member expression', name: '', condition: '', value: value}];
 }
 
+function extractForStatementHandler(forStatement) {
+    let varName = arrayOfOneMapToString(extract(forStatement.init)[0].name);
+    let init = arrayOfOneMapToString(extract(forStatement.init)[0].value);
+    let test = arrayOfOneMapToString(extract(forStatement.test));
+    let update = arrayOfOneMapToString(extract(forStatement.update));
+    let value = varName + '=' + init + '; ' + test + '; ' + update;
+    let tuples = [{line : forStatement.loc.start.line , type :'for statement', name: '', condition: '', value: value}];
+    tuples = tuples.concat(extract(forStatement.body));
+    return tuples;
+}
+
+function extractUpdateExpressionHandler(updateExpression) {
+    let operator = updateExpression.operator;
+    let argument = arrayOfOneMapToString(extract(updateExpression.argument));
+    let value = updateExpression.prefix ? operator + argument: argument + operator ;
+    return [{line : updateExpression.loc.start.line , type :'update expression', name: argument, condition: '',
+        value: value}];
+}
+
 function arrayOfOneMapToString(arrayOfOneMap) {
     const toStringHandlersMap = {identifier: identifierToString, literal: literalToString, 'unary expression': unaryExpressionToString,
-        'member expression': memberExpressionToString};
+        'member expression': memberExpressionToString, 'update expression': UpdateExpressionToString};
     if (arrayOfOneMap && arrayOfOneMap.length > 0 && toStringHandlersMap[arrayOfOneMap[0].type]!==undefined)
         return toStringHandlersMap[arrayOfOneMap[0].type](arrayOfOneMap[0]);
     return arrayOfOneMap;
@@ -141,6 +166,11 @@ function unaryExpressionToString(unaryExpression) {
 
 function memberExpressionToString(memberExpression) {
     return memberExpression.value;
+
+}
+
+function UpdateExpressionToString(updateExpression) {
+    return updateExpression.value;
 
 }
 
