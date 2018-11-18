@@ -1,7 +1,7 @@
 import * as esprima from 'esprima';
 
 const parseCode = (codeToParse) => {
-    return esprima.parseScript(codeToParse ,{loc:true} );
+    return esprima.parseScript(codeToParse ,{loc:true});
 };
 
 function extract(element) {
@@ -11,9 +11,9 @@ function extract(element) {
         Literal: extractLiteralHandler, IfStatement: extractIfStatementHandler,
         WhileStatement:extractWhileStatementHandler, ExpressionStatement: extractExpressionStatementHandler,
         VariableDeclaration: extractVariableDeclarationHandler, VariableDeclarator: extractVariableDeclaratorHandler,
-        AssignmentExpression: extractAssignmentExpressionHandler, CallExpression: extractCallExpressionHandler,
-        UnaryExpression: extractUnaryExpressionHandler, MemberExpression: extractMemberExpressionHandler,
-        ForStatement: extractForStatementHandler, UpdateExpression: extractUpdateExpressionHandler};
+        AssignmentExpression: extractAssignmentExpressionHandler,UnaryExpression: extractUnaryExpressionHandler,
+        MemberExpression: extractMemberExpressionHandler, UpdateExpression: extractUpdateExpressionHandler,
+        ForStatement: extractForStatementHandler,};
     let func = typesHandlersMap[element.type];
     return func ? func(element) : null;
 }
@@ -31,10 +31,7 @@ function extractFunctionDeclarationHandler(functionDeclaration) {
     let params = functionDeclaration.params;
     for (let i = 0 ; i< params.length; i++) {
         let nextParam = extract(params[i]); //expecting array of one element (a map)
-        if (nextParam[0].type) // not null or undefined or [] or false...
-            nextParam[0].type = 'variable declaration';
-        else
-            continue;
+        nextParam[0].type = 'variable declaration';
         tuples = tuples.concat(nextParam);
     }
     tuples = tuples.concat(extract(functionDeclaration.body)); // functionDeclaration.body it's a map , not array
@@ -110,11 +107,6 @@ function extractAssignmentExpressionHandler(assignmentExpression) {
     return [{line : assignmentExpression.loc.start.line , type :'assignment expression', name: name, condition: '', value: value}];
 }
 
-function extractCallExpressionHandler(callExpression) {
-    let value = '';
-    return [{line : callExpression.loc.start.line , type :'call expression', name: '', condition: '', value: value}];
-}
-
 function extractUnaryExpressionHandler(unaryExpression) {
     let value = unaryExpression.operator + arrayOfOneMapToString(extract(unaryExpression.argument));
     return [{line : unaryExpression.loc.start.line , type :'unary expression', name: '', condition: '', value: value}];
@@ -123,6 +115,14 @@ function extractUnaryExpressionHandler(unaryExpression) {
 function extractMemberExpressionHandler(memberExpression) {
     let value = arrayOfOneMapToString(extract(memberExpression.object)) + '[' + arrayOfOneMapToString(extract(memberExpression.property)) +']';
     return [{line : memberExpression.loc.start.line , type :'member expression', name: '', condition: '', value: value}];
+}
+
+function extractUpdateExpressionHandler(updateExpression) {
+    let operator = updateExpression.operator;
+    let argument = arrayOfOneMapToString(extract(updateExpression.argument));
+    let value = updateExpression.prefix ? operator + argument: argument + operator ;
+    return [{line : updateExpression.loc.start.line , type :'update expression', name: argument, condition: '',
+        value: value}];
 }
 
 function extractForStatementHandler(forStatement) {
@@ -134,14 +134,6 @@ function extractForStatementHandler(forStatement) {
     let tuples = [{line : forStatement.loc.start.line , type :'for statement', name: '', condition: '', value: value}];
     tuples = tuples.concat(extract(forStatement.body));
     return tuples;
-}
-
-function extractUpdateExpressionHandler(updateExpression) {
-    let operator = updateExpression.operator;
-    let argument = arrayOfOneMapToString(extract(updateExpression.argument));
-    let value = updateExpression.prefix ? operator + argument: argument + operator ;
-    return [{line : updateExpression.loc.start.line , type :'update expression', name: argument, condition: '',
-        value: value}];
 }
 
 function arrayOfOneMapToString(arrayOfOneMap) {
