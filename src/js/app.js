@@ -1,6 +1,8 @@
 import $ from 'jquery';
 import {parseCode, extract} from './code-analyzer';
 
+let rowNum = 0;
+
 $(document).ready(function () {
     $('#codeSubmissionButton').click(() => {
         let codeToParse = $('#codePlaceholder').val();
@@ -14,16 +16,15 @@ $(document).ready(function () {
 function showTable(tuplesArray) {
     let body = document.getElementsByTagName('body')[0] , table = document.createElement('table'), tableBody = document.createElement('table_body'),
         caption = document.createElement('caption');
-    table.style.width = '50%';
-    table.setAttribute('border', '20');
-    table.setAttribute('id', 'resultTable');
+    table.id = 'resultTable';
+    table.setAttribute('style','font-family: arial; border-collapse: collapse;');
     caption.appendChild(document.createTextNode('Result'));
-    caption.setAttribute('style', 'font:arial; font-size:200% ; font-weight: bold;');
+    caption.setAttribute('style', 'font:arial; font-size:150% ; font-weight: bold;');
     tableBody.setAttribute('style', 'font-family: arial; font-size:130%;');
+    tableBody.appendChild(caption);
     tableBody.appendChild(initTitles());
     for (let i = 0; i < tuplesArray.length; i++)
         tableBody.appendChild(addTuple(tuplesArray[i]));
-    table.appendChild(caption);
     table.appendChild(tableBody);
     body.appendChild(table);
 }
@@ -40,7 +41,7 @@ function initTitles() {
     th5.appendChild(document.createTextNode('value'));
 
     appendChildren(tr,[th1,th2,th3,th4,th5]);
-    th1.setAttribute('style', 'padding: 8px;');
+    setAttributes([th1,th2,th3,th4,th5],'style', 'border: 1px solid #dddddd; padding: 8px;');
     return tr;
 }
 
@@ -54,7 +55,10 @@ function addTuple(tuple){
     td4.appendChild(document.createTextNode(tuple.condition));
     td5.appendChild(document.createTextNode(tuple.value));
 
-    setAttributes([td1,td2,td3,td4,td5],'style','padding:0 50px 0 5 0px;');
+    setAttributes([td1,td2,td3,td4,td5],'style','border: 1px solid #dddddd; text-align: left; padding: 8px;');
+    if(rowNum%2 === 0)
+        tr.style.backgroundColor = 'lightblue';
+    rowNum++;
     appendChildren(tr,[td1,td2,td3,td4,td5]);
     return tr;
 }
@@ -70,6 +74,7 @@ function setAttributes(arr,qualifiedName,value) {
 }
 
 function clearTable() {
+    rowNum = 0;
     let table = document.getElementById('resultTable');
     if(table!==null)
         table.remove();

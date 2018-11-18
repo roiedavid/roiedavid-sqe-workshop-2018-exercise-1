@@ -46,7 +46,7 @@ describe('The javascript parser', () => {
     it('BinaryExpression test', () => {
         assert(
             JSON.stringify(extract(parseCode('1+2;'))) ===
-            '["1+2"]'
+            '["1 + 2"]'
         );
     });
 
@@ -61,7 +61,7 @@ describe('The javascript parser', () => {
         assert(
             JSON.stringify(extract(parseCode(` if (x<4)
              y = x - 1;`))) ===
-            '[{"line":1,"type":"if statement","name":"","condition":"x<4","value":""},{"line":2,"type":"assignment expression","name":"y","condition":"","value":"x-1"}]'
+            '[{"line":1,"type":"if statement","name":"","condition":"x < 4","value":""},{"line":2,"type":"assignment expression","name":"y","condition":"","value":"x - 1"}]'
         );
     });
 
@@ -74,15 +74,15 @@ describe('The javascript parser', () => {
                 'y=7;\n' +
                 'return x++;\n' +
                 '}'))) ===
-            '[{"line":1,"type":"function declaration","name":"f","condition":"","value":""},{"line":1,"type":"variable declaration",' +
-            '"name":"x","condition":"","value":""},{"line":2,"type":"if statement","name":"","condition":"x<6","value":""},' +
-            '{"line":3,"type":"assignment expression","name":"y","condition":"","value":1},{"line":4,"type":"else if statement","name":"",' +
-            '"condition":"x>10","value":""},{"line":5,"type":"assignment expression","name":"y","condition":"","value":7},' +
+            '[{"line":1,"type":"function declaration","name":"f","condition":"","value":""},' +
+            '{"line":1,"type":"variable declaration","name":"x","condition":"","value":""},' +
+            '{"line":2,"type":"if statement","name":"","condition":"x < 6","value":""},' +
+            '{"line":3,"type":"assignment expression","name":"y","condition":"","value":1},' +
+            '{"line":4,"type":"else if statement","name":"","condition":"x > 10","value":""},' +
+            '{"line":5,"type":"assignment expression","name":"y","condition":"","value":7},' +
             '{"line":6,"type":"return statement","name":"","condition":"","value":"x++"}]'
         );
     });
-
-
 
     it('else test', () => {
         assert(
@@ -95,13 +95,12 @@ describe('The javascript parser', () => {
                 '}'))) ===
             '[{"line":1,"type":"function declaration","name":"f","condition":"","value":""},' +
             '{"line":1,"type":"variable declaration","name":"x","condition":"","value":""},' +
-            '{"line":2,"type":"if statement","name":"","condition":"x<6","value":""},' +
-            '{"line":3,"type":"assignment expression","name":"y","condition":"","value":1},"x>10",' +
+            '{"line":2,"type":"if statement","name":"","condition":"x < 6","value":""},' +
+            '{"line":3,"type":"assignment expression","name":"y","condition":"","value":1},"x > 10",' +
             '{"line":5,"type":"assignment expression","name":"y","condition":"","value":7},' +
             '{"line":6,"type":"return statement","name":"","condition":"","value":"x++"}]'
         );
     });
-
 
     it('WhileStatement test', () => {
         assert(
@@ -109,8 +108,9 @@ describe('The javascript parser', () => {
                 y = x - 1;
                 x++;
                 }`))) ===
-            '[{"line":1,"type":"while statement","name":"","condition":"x<4","value":""},' +
-            '{"line":2,"type":"assignment expression","name":"y","condition":"","value":"x-1"},{"line":3,"type":"update expression","name":"x","condition":"","value":"x++"}]'
+            '[{"line":1,"type":"while statement","name":"","condition":"x < 4","value":""},' +
+            '{"line":2,"type":"assignment expression","name":"y","condition":"","value":"x - 1"},' +
+            '{"line":3,"type":"update expression","name":"x","condition":"","value":"x++"}]'
         );
     });
 
@@ -136,11 +136,14 @@ describe('The javascript parser', () => {
                 'b=2;\n' +
                 'return a+b+x+y;\n' +
                 '}'))) ===
-            '[{"line":1,"type":"function declaration","name":"func","condition":"","value":""},{"line":1,"type":"variable declaration",' +
-            '"name":"x","condition":"","value":""},{"line":1,"type":"variable declaration","name":"y","condition":"","value":""},{"line":2,' +
-            '"type":"variable declaration","name":"a","condition":"","value":null},{"line":2,"type":"variable declaration","name":"b","condition"' +
-            ':"","value":null},{"line":3,"type":"assignment expression","name":"a","condition":"","value":1},{"line":4,"type":"assignment expression",' +
-            '"name":"b","condition":"","value":2},{"line":5,"type":"return statement","name":"","condition":"","value":"a+b+x+y"}]'
+            '[{"line":1,"type":"function declaration","name":"func","condition":"","value":""},' +
+            '{"line":1,"type":"variable declaration","name":"x","condition":"","value":""},' +
+            '{"line":1,"type":"variable declaration","name":"y","condition":"","value":""},' +
+            '{"line":2,"type":"variable declaration","name":"a","condition":"","value":null},' +
+            '{"line":2,"type":"variable declaration","name":"b","condition":"","value":null},' +
+            '{"line":3,"type":"assignment expression","name":"a","condition":"","value":1},' +
+            '{"line":4,"type":"assignment expression","name":"b","condition":"","value":2},' +
+            '{"line":5,"type":"return statement","name":"","condition":"","value":"a + b + x + y"}]'
         );
     });
 
@@ -165,12 +168,17 @@ describe('The javascript parser', () => {
         );
     });
 
-
-
-    it('MemberExpression test', () => {
+    it('MemberExpression with [] test', () => {
         assert(
             JSON.stringify(extract(parseCode('arr[index];'))) ===
             '[{"line":1,"type":"member expression","name":"","condition":"","value":"arr[index]"}]'
+        );
+    });
+
+    it('MemberExpression array.length test', () => {
+        assert(
+            JSON.stringify(extract(parseCode('array.length;'))) ===
+            '[{"line":1,"type":"member expression","name":"","condition":"","value":"array.length"}]'
         );
     });
 
@@ -193,8 +201,25 @@ describe('The javascript parser', () => {
             JSON.stringify(extract(parseCode('for (let i = 0 ; i< counter ; i++){\n' +
                 '   arr[i]++;\n' +
                 '}'))) ===
-            '[{"line":1,"type":"for statement","name":"","condition":"","value":"i=0; i<counter; i++"},' +
+            '[{"line":1,"type":"for statement","name":"","condition":"i=0; i < counter; i++","value":""},' +
             '{"line":2,"type":"update expression","name":"arr[i]","condition":"","value":"arr[i]++"}]'
+        );
+    });
+
+    it('SequenceExpression test', () => {
+        assert(
+            JSON.stringify(extract(parseCode('let x,y; x=6,y=10;'))) ===
+            '[{"line":1,"type":"variable declaration","name":"x","condition":"","value":null},' +
+            '{"line":1,"type":"variable declaration","name":"y","condition":"","value":null},' +
+            '{"line":1,"type":"assignment expression","name":"x","condition":"","value":6},' +
+            '{"line":1,"type":"assignment expression","name":"y","condition":"","value":10}]'
+        );
+    });
+
+    it('SequenceExpression test', () => {
+        assert(
+            JSON.stringify(extract(parseCode('x && y;'))) ===
+            '["x && y"]'
         );
     });
 

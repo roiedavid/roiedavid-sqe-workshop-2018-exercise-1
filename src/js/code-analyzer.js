@@ -13,7 +13,8 @@ function extract(element) {
         VariableDeclaration: extractVariableDeclarationHandler, VariableDeclarator: extractVariableDeclaratorHandler,
         AssignmentExpression: extractAssignmentExpressionHandler,UnaryExpression: extractUnaryExpressionHandler,
         MemberExpression: extractMemberExpressionHandler, UpdateExpression: extractUpdateExpressionHandler,
-        ForStatement: extractForStatementHandler,};
+        ForStatement: extractForStatementHandler, SequenceExpression: extractSequenceExpressionHandler,
+        LogicalExpression: extractLogicalExpressionHandler};
     let func = typesHandlersMap[element.type];
     return func ? func(element) : null;
 }
@@ -56,7 +57,7 @@ function extractReturnStatementHandler(returnStatement) {
 }
 
 function extractBinaryExpressionHandler(binaryExpression) {
-    return arrayOfOneMapToString(extract(binaryExpression.left)) + '' + binaryExpression.operator + '' + arrayOfOneMapToString(extract(binaryExpression.right));
+    return arrayOfOneMapToString(extract(binaryExpression.left)) + ' ' + binaryExpression.operator + ' ' + arrayOfOneMapToString(extract(binaryExpression.right));
 }
 
 function extractLiteralHandler(literal) {
@@ -113,7 +114,8 @@ function extractUnaryExpressionHandler(unaryExpression) {
 }
 
 function extractMemberExpressionHandler(memberExpression) {
-    let value = arrayOfOneMapToString(extract(memberExpression.object)) + '[' + arrayOfOneMapToString(extract(memberExpression.property)) +']';
+    let value = arrayOfOneMapToString(extract(memberExpression.object)) + (memberExpression.computed ? '[' : '.') +
+                arrayOfOneMapToString(extract(memberExpression.property)) + (memberExpression.computed ? ']' : '');
     return [{line : memberExpression.loc.start.line , type :'member expression', name: '', condition: '', value: value}];
 }
 
@@ -130,10 +132,21 @@ function extractForStatementHandler(forStatement) {
     let init = arrayOfOneMapToString(extract(forStatement.init)[0].value);
     let test = arrayOfOneMapToString(extract(forStatement.test));
     let update = arrayOfOneMapToString(extract(forStatement.update));
-    let value = varName + '=' + init + '; ' + test + '; ' + update;
-    let tuples = [{line : forStatement.loc.start.line , type :'for statement', name: '', condition: '', value: value}];
+    let condition = varName + '=' + init + '; ' + test + '; ' + update;
+    let tuples = [{line : forStatement.loc.start.line , type :'for statement', name: '', condition: condition, value: ''}];
     tuples = tuples.concat(extract(forStatement.body));
     return tuples;
+}
+
+function extractSequenceExpressionHandler(sequenceExpression) {
+    let tuples=[];
+    for (let i = 0 ; i<sequenceExpression.expressions.length; i++)
+        tuples = tuples.concat(extract(sequenceExpression.expressions[i]));
+    return tuples;
+}
+
+function extractLogicalExpressionHandler(logicalExpression) {
+    return arrayOfOneMapToString(extract(logicalExpression.left)) + ' ' + logicalExpression.operator + ' ' + arrayOfOneMapToString(extract(logicalExpression.right));
 }
 
 function arrayOfOneMapToString(arrayOfOneMap) {
@@ -163,7 +176,6 @@ function memberExpressionToString(memberExpression) {
 
 function UpdateExpressionToString(updateExpression) {
     return updateExpression.value;
-
 }
 
 export {parseCode, extract};
