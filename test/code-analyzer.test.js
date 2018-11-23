@@ -223,6 +223,27 @@ describe('The javascript parser', () => {
         );
     });
 
+    it('simple callExpression test', () => {
+        assert(
+            JSON.stringify(extract(parseCode('let x = foo(y);'))) ===
+            '[{"line":1,"type":"variable declaration","name":"x","condition":"","value":"foo(y)"}]'
+        );
+    });
+
+    it('void callExpression test', () => {
+        assert(
+            JSON.stringify(extract(parseCode('fact(5);'))) ===
+            '[{"line":1,"type":"call expression","name":"","condition":"","value":"fact(5)"}]'
+        );
+    });
+
+    it('few args callExpression test', () => {
+        assert(
+            JSON.stringify(extract(parseCode('func(x,y,z);'))) ===
+            '[{"line":1,"type":"call expression","name":"","condition":"","value":"func(x, y, z)"}]'
+        );
+    });
+
     it('not exit type test', () => {
         assert(JSON.stringify(extract(parseCode('{type : \'blabla\'}'))) === JSON.stringify([null])
         );

@@ -14,7 +14,7 @@ function extract(element) {
         AssignmentExpression: extractAssignmentExpressionHandler,UnaryExpression: extractUnaryExpressionHandler,
         MemberExpression: extractMemberExpressionHandler, UpdateExpression: extractUpdateExpressionHandler,
         ForStatement: extractForStatementHandler, SequenceExpression: extractSequenceExpressionHandler,
-        LogicalExpression: extractLogicalExpressionHandler};
+        LogicalExpression: extractLogicalExpressionHandler, CallExpression: extractCallExpressionHandler};
     let func = typesHandlersMap[element.type];
     return func ? func(element) : null;
 }
@@ -149,33 +149,31 @@ function extractLogicalExpressionHandler(logicalExpression) {
     return arrayOfOneMapToString(extract(logicalExpression.left)) + ' ' + logicalExpression.operator + ' ' + arrayOfOneMapToString(extract(logicalExpression.right));
 }
 
+function extractCallExpressionHandler(callExpression) {
+    let value = arrayOfOneMapToString(extract(callExpression.callee)) + '(';
+    let args = '';
+    for (let i = 0; i < callExpression.arguments.length; i++) {
+        args += arrayOfOneMapToString(extract(callExpression.arguments[i]));
+        if (i < callExpression.arguments.length - 1)
+            args += ', ';
+    }
+    value += args + ')';
+    return [{line : callExpression.loc.start.line , type :'call expression', name: '', condition: '', value: value}];
+}
+
 function arrayOfOneMapToString(arrayOfOneMap) {
-    const toStringHandlersMap = {identifier: identifierToString, literal: literalToString, 'unary expression': unaryExpressionToString,
-        'member expression': memberExpressionToString, 'update expression': UpdateExpressionToString};
+    const toStringHandlersMap = {identifier: getTupleName, literal: getTupleValue, 'unary expression': getTupleValue,
+        'member expression': getTupleValue, 'update expression': getTupleValue, 'call expression': getTupleValue};
     if (arrayOfOneMap && arrayOfOneMap.length > 0 && toStringHandlersMap[arrayOfOneMap[0].type]!==undefined)
         return toStringHandlersMap[arrayOfOneMap[0].type](arrayOfOneMap[0]);
     return arrayOfOneMap;
 }
 
-function identifierToString(identifier) {
-    return identifier.name;
+function getTupleName(tuple) {
+    return tuple.name;
 }
 
-function literalToString(literal) {
-    return literal.value;
+function getTupleValue(tuple) {
+    return tuple.value;
 }
-
-function unaryExpressionToString(unaryExpression) {
-    return unaryExpression.value;
-}
-
-function memberExpressionToString(memberExpression) {
-    return memberExpression.value;
-
-}
-
-function UpdateExpressionToString(updateExpression) {
-    return updateExpression.value;
-}
-
 export {parseCode, extract};
